@@ -1,1 +1,67 @@
-/.claude
+# Dependencies
+node_modules/
+
+# Electron Builder output
+dist/
+release/
+out/
+build/
+*.blockmap
+latest*.yml
+
+# Ceremony exports and local operational data
+*.graduation-backup
+restore-staging-*/
+restore-rollback-*/
+ceremony-library/
+ceremony-library.previous/
+ceremony-library.staging-*/
+ceremony-library.maintenance-*/
+ceremony-library.projector-background-*/
+ceremony-library.main-background-*/
+library-working/
+recording-drafts/
+backups/
+controller-settings.json
+output-registry.json
+event-ledger.json
+restore-journal.json
+factory-reset-journal.json
+factory-reset-quarantine-*/
+
+# Test and coverage output
+coverage/
+.nyc_output/
+.cache/
+.eslintcache
+
+# Logs and diagnostics
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.pid
+*.pid.lock
+*.tmp
+*.temp
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Editor and OS metadata
+.vscode/
+.idea/
+.vs/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local AI assistant settings
+.claude/
+.agents/
+.codex/

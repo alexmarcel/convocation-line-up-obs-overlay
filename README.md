@@ -1,175 +1,265 @@
-# Graduation Line-Up OBS Overlay
+# Anugerah Pengarah Display
 
-A serverless, single-file browser tool for live graduation ceremony production. An operator scans a student's ID barcode (or searches by name) to instantly trigger a broadcast-ready lower-third graphic in OBS Studio — displaying the student's **Name**, **Group**, **Achievement/Marks**, and **Photo**.
+A Windows/Electron graduation line-up system for barcode-driven projector and OBS graphics. One controller computer owns the ceremony data and hosts three browser clients over a trusted local network, so the show can run without internet access.
 
-![Status](https://img.shields.io/badge/Status-Active-brightgreen)
-![Tech](https://img.shields.io/badge/Tech-HTML%20%2F%20CSS%20%2F%20JS-blue)
-![No Install](https://img.shields.io/badge/Install-None-lightgrey)
+## Project rundown
 
-<img width="1430" height="803" alt="Screenshot" src="https://github.com/user-attachments/assets/04e42ad5-cfa8-44f9-afa8-823ad82d89c2" />
+The application has four interfaces:
 
-**Sample usage:** [https://www.youtube.com/watch?v=HX_6nw8k-v4](https://www.youtube.com/watch?v=HX_6nw8k-v4)
+| Interface | Location | Responsibility |
+| --- | --- | --- |
+| Controller | Electron desktop window (`/controller`) | Imports and edits the ceremony library, records names, manages backups, monitors devices, controls the live display, and can optionally monitor announcement audio |
+| Scanner | `/scanner` | Accepts barcode scans or manual student searches and reports delivery status |
+| Projector | `/projector` | Shows the full student presentation and optionally plays the announcement |
+| OBS | `/obs` | Renders a broadcast lower third with transparent or chroma-key background |
 
----
+At startup, Electron launches an HTTP and WebSocket server on port `4173`. Remote browsers download a role-specific, versioned library and retain it in IndexedDB. The controller then sends small live events such as “show student” and “clear”; images, student details, and audio are rendered from each client's verified local cache.
 
-## Features
+Synchronization completion is tracked independently for Scanner, Projector, and OBS, even when several roles use the same browser profile. A client reporting **Ready** has verified that every asset required by its role is present locally.
 
-- **Dual-window sync** — Controller window for the operator, clean Output window for OBS. Synced in real time via the browser's `BroadcastChannel` API
-- **Zero backend** — Runs entirely in the browser. No server, no database, no installation
-- **USB barcode scanner support** — Works with any standard USB scanner in keyboard emulation mode
-- **CSV data import** — Load hundreds of student records instantly from Excel/CSV
-- **Photo & audio sync to OBS window** — Photos and audio are converted to base64 and stored in browser storage so the OBS window receives them automatically. If storage is full, load them directly in the OBS window using the built-in import buttons
-- **Audio announcement** — Load a folder of `.wav`/`.mp3` files named by student ID; plays automatically on scan (toggleable)
-- **Student line-up sidebar** — Live scrolling queue showing all students; click any row as a manual fallback if the scanner fails
-- **Print barcodes** — Generate and print a full sheet of Code 128 barcode labels (one per student) directly from the browser
-- **Manual search** — Search by name or ID with instant results
-- **Display card customization** — Toggle avatar visibility, rounded/flat card shape, left/center/right text alignment; all settings sync to the OBS window
-- **Accent color picker** — Customize the card's glow/accent color with per-slot swatches + color picker; persists across sessions
-- **Chroma key support** — Switch background to any color (green, blue, magenta, custom) for OBS Chroma Key filter
-- **Animation toggle** — Smooth slide-in/fade transitions, toggleable
-- **OBS Mode** — Hides all controls; one-click exit back to controller
+Key reliability behavior:
 
----
+- The controller is the source of truth for the current library and live state.
+- Assets are SHA-256 verified before a new library becomes active on a client.
+- A previous library remains usable until its replacement is completely downloaded.
+- Required outputs must be connected and synchronized before a scanner can send a student live.
+- Scans made while a scanner is offline are queued locally and require explicit controller approval after reconnection.
+- Library publication and restores use staged activation, safety snapshots, and rollback handling.
+- Factory reset uses an allowlisted, journaled transaction so interrupted resets finish safely without deleting unrelated Electron data.
+- Only one controller instance can run per Windows user.
 
-## Quick Start
+## Repository layout
 
-### 1. Download
-Download `scanner.html` and open it in **Google Chrome** or **Microsoft Edge**. No installation needed.
-
-### 2. Prepare your CSV
-
-Create a `.csv` file with the following columns:
-
+```text
+.
+|-- src/                 Electron main process and backend modules
+|   |-- main.js          App lifecycle, IPC, file dialogs, and managed storage
+|   |-- server.js        LAN HTTP/WebSocket server and live state
+|   |-- library.js       CSV/media import and library publication
+|   |-- maintenance.js   Staged student and media editing
+|   |-- recordings.js    Recording drafts and publication
+|   |-- backups.js       Portable backups, snapshots, restore, and recovery
+|   `-- factory-reset.js Allowlisted blank-state reset and crash recovery
+|-- public/              Controller, scanner, projector, and OBS front ends
+|-- test/                Node test suite
+|-- scanner.html         Legacy standalone prototype; not used by the app
+|-- students_new.csv     Small example CSV
+`-- package.json         Scripts, dependencies, and Windows build settings
 ```
+
+The project uses CommonJS and intentionally has no front-end bundling step. Electron serves the files in `public/` directly. The installer includes only `src/`, `public/`, and `package.json`.
+
+## Requirements
+
+For operation:
+
+- Windows 10 or 11 controller computer
+- Chrome or Edge on scanner/output computers
+- A trusted LAN shared by all devices
+- A USB barcode scanner in keyboard-emulation mode
+- A controller microphone if names will be recorded in the application
+
+For development:
+
+- Node.js 20 or newer
+- npm
+
+For live events, a dedicated router and wired Ethernet are strongly recommended. Set the controller's Windows network profile to **Private**, allow the app through Windows Firewall on private networks, and disable sleep and automatic restarts on show computers.
+
+## Quick start for developers
+
+Install dependencies and launch the Electron controller:
+
+```powershell
+npm install
+npm start
+```
+
+Run the automated tests:
+
+```powershell
+npm test
+```
+
+Build the Windows NSIS installer and portable executable:
+
+```powershell
+npm run dist
+```
+
+Build only the portable executable:
+
+```powershell
+npm run pack
+```
+
+Build artifacts are written to `dist/`.
+
+## Preparing ceremony data
+
+### Student CSV
+
+The CSV requires these exact headers:
+
+```csv
 id,name,group,marks
 10001,Ahmad Bin Ali,MERAH,95%
 10002,Siti Nurhaliza,BIRU,88%
-10003,John Doe,HIJAU,92%
 ```
 
-> Column headers must be exactly `id`, `name`, `group`, `marks`.
+Fields may be quoted and may contain commas or line breaks. Import rejects missing headers, empty required values, and duplicate IDs.
 
-### 3. Prepare your photos *(optional)*
+### Photos
 
-Put all student photos in one folder. Name each file after the student ID:
+Name each image after the matching student ID:
 
-```
-10001.jpg
-10002.png
-10003.jpg
-```
-
-### 4. Prepare your audio files *(optional)*
-
-Put `.wav` or `.mp3` announcement files in one folder, named by student ID:
-
-```
-10001.wav
-10002.mp3
+```text
+photos/
+|-- 10001.jpg
+`-- 10002.png
 ```
 
----
+JPG, PNG, and WebP are supported. The importer optimizes full-size images and creates scanner thumbnails.
 
-## Two-Window Workflow
+### Existing audio
 
-### Controller Window
-1. Open `scanner.html` in your browser
-2. Click **Import CSV** and select your `.csv` file
-3. Click **Import Photos** and select your photos folder — photos are automatically synced to the OBS window via browser storage
-4. *(Optional)* Click **Import Audio** and select your audio folder — audio syncs the same way
-5. Use the scan input or **Search** button to display students
+Existing announcements can be imported in the same way:
 
-### Output Window (OBS)
-1. Open `scanner.html` in a **new tab or window** (same browser)
-2. Click **OBS Mode** — controls disappear, layout shifts to lower-third position
-3. In OBS Studio, add a **Window Capture** source and select the output window
-4. *(Optional)* Enable **Chroma Key** in OBS and match the background color set in the controller
+```text
+audio/
+|-- 10001.mp3
+`-- 10002.wav
+```
 
-> **If photos or audio don't appear in the OBS window** (e.g. browser storage is full, or the OBS window was opened before importing), use the **Photos** and **Audio** buttons in the bottom-right corner of the OBS window to load them directly there.
+MP3 and WAV are supported. Audio is optional because names can also be recorded in the controller.
 
-### Reverting from OBS Mode
-Click the **Controller Mode** button in the top-right corner of the OBS window to return to the controller.
+## Ceremony workflow
 
----
+1. Launch **Anugerah Pengarah Display** on the controller computer.
+2. Select **Start new ceremony**, then choose the CSV and optional photo/audio folders.
+3. Review counts, the collapsed unmatched-media list, and missing photos in the controller.
+4. If needed, use **Record student names** and publish the accepted recording batch.
+5. Open the LAN URLs shown by the controller on the scanner, projector, and OBS computers.
+6. Configure required outputs, remote and optional Controller audio, fade timings, colors, projector backgrounds, and OBS background mode.
+7. Wait for every required station to report **Ready** and run a full rehearsal.
+8. Scan each student's ID. Use **Clear display** when the stage should be empty.
 
-## Controls Reference
+The displayed URLs resemble:
 
-### Controller Sidebar
+```text
+http://192.168.1.20:4173/scanner
+http://192.168.1.20:4173/projector
+http://192.168.1.20:4173/obs
+```
 
-| Control | Description |
-|:---|:---|
-| **Search** | Open the search modal to find a student by name or ID |
-| **View All Students** | Browse all loaded students with photo and audio status |
-| **Import CSV** | Load student data from a `.csv` file |
-| **Import Photos** | Load a folder of student photos (syncs to OBS window) |
-| **Import Audio** | Load a folder of audio announcement files (syncs to OBS window) |
-| **Audio: ON/OFF** | Toggle audio playback on scan |
-| **Anim: ON/OFF** | Toggle the card slide-in animation |
-| **Chroma: ON/OFF** | Toggle chroma key background |
-| **OBS Mode** | Switch this window to broadcast output mode |
-| **Clear** | Remove the current student card from the screen |
-| **Print Barcodes** | Open print preview with a full sheet of student barcode labels |
-| **Align buttons** | Set display card text to left / center / right |
-| **Show Avatar on Card** | Toggle the student photo on the display card |
-| **Rounded Card** | Toggle the pill-shaped left side of the display card |
-| **Color swatches** | Change the card accent/glow color |
-| **Chroma palette** | Change the chroma key background color |
+The controller must remain open for the entire ceremony.
 
-### OBS Window (bottom-right, visible in OBS mode only)
+The packaged controller hides Electron's default File/Edit/View/Window menu to reduce accidental reloads or developer-tool access during live operation.
 
-| Button | Description |
-|:---|:---|
-| **Photos** | Load photo folder directly into the OBS window |
-| **Audio** | Load audio folder directly into the OBS window |
+The controller hero summarizes live ceremony state at a glance. It shows setup, synchronization, output-readiness, and reconnecting states; after a successful scan it shows the current student's photo, name, ID, group, and marks until the display is cleared.
 
----
+### Scanner behavior
 
-## Scanner Fallback (If Barcode Scanner Fails)
+The scanner field automatically regains focus and accepts scanners that append Enter or carriage return. Operators can also type part of a name or ID and choose a search result. Unknown IDs are rejected and do not change projector or OBS output.
 
-If the physical scanner stops working mid-ceremony, the operator has two seamless fallbacks without interrupting the broadcast:
+After a valid scan, the Scanner card and controller hero each run their own elapsed/total timeline from the student's published audio. When no published recording exists, the timeline remains gray and reports **No published audio**.
 
-1. **Click any row in the sidebar** — the student line-up panel shows all students; clicking a row immediately puts them on screen
-2. **Search button** — type the student name or ID and click the result
+If the scanner loses its connection, scans are stored in its browser. They never replay automatically. After reconnection, review them under **Offline scan approvals** and approve or discard each event.
 
-Both methods sync to the OBS output window normally.
+### Recording names
 
----
+The recording studio stores drafts immediately, so they survive a controller restart. Drafts stay off-air until **Publish recordings** creates a new library revision.
 
-## Photo & Audio Sync Notes
+| Key | Action |
+| --- | --- |
+| `Space` | Start or stop recording |
+| `Enter` | Save and move to the next student |
+| `Left` / `Right` | Previous or next student |
+| `Delete` | Remove a draft before replacing it |
+| `Escape` | Close the recording studio |
 
-Photos and audio files are converted to base64 data URLs when imported and stored in the browser's `localStorage`. This allows the OBS window (a separate tab/window) to access them without re-importing.
+Recordings are saved as mono WAV, with conservative silence trimming and normalization.
 
-**Limitations:**
-- Browser `localStorage` is typically limited to ~5–10 MB. Large photo sets or high-bitrate audio files may exceed this limit
-- If storage is full, a toast notification will appear directing you to load files directly in the OBS window using its built-in import buttons
-- Both windows must be in the **same browser** (e.g. both in Chrome) for sync to work
+### Editing an active ceremony
 
----
+Use **Manage library** to add, edit, remove, or reorder students and to replace media. Changes go to a resumable working copy and do not reach live clients until **Publish changes**.
 
-## Troubleshooting
+Use **Update current ceremony** to reconcile a revised CSV. Existing IDs are updated, new IDs are added, and omitted students are retained for explicit review. Existing media and recording drafts remain unless replacements are selected.
 
-**Scanner beeps but nothing happens**
-Configure your barcode scanner to append an Enter/CR suffix after each scan. This is standard and usually set via a programming barcode in the scanner's manual.
+### Projector and OBS
 
-**Photos not showing in OBS window**
-Either browser storage is full (check for a toast warning), or the OBS window was opened before photos were imported. Use the **Photos** button in the bottom-right corner of the OBS window to load them directly.
+Output settings are grouped into **Event & branding**, **Audio**, **Student transitions**, **Projector**, and **OBS** cards. Short descriptions remain visible while focused or hovered information icons explain settings that need more context.
 
-**Audio not playing**
-Check that the audio filename matches the student ID exactly and that **Audio: ON** is active. If in the OBS window, use the **Audio** button in the bottom-right to load audio directly. Some browsers require a user interaction before audio is allowed to play.
+The Projector section provides a **Student display background** with adjustable darkness and a separate **Cleared-display standby background**. The student background remains behind student information; the standby image fades in only after **Clear display** and disappears when the next student is shown. Both assets are synchronized to Projector devices and included in ceremony backups. The Projector top header can show the event name or be hidden.
 
-**Two windows not syncing**
-Both windows must be open in the **same browser application** (e.g. both in Chrome). Cross-browser sync is not supported.
+OBS supports a transparent canvas or a configurable chroma-key color. Audio can be routed to Projector, OBS, both, or neither; normally only one output should play audio to avoid duplication.
 
-**OBS captures the wrong window**
-Make sure you clicked **OBS Mode** on the second window. The window title changes to `OBS OUTPUT` — this is what OBS looks for in Window Capture.
+The Audio card supports independent 0–10 second fade-in and natural fade-out timings. A value of zero disables that fade. Routing and fade settings synchronize to connected outputs and are preserved in backups.
 
----
+Student changes on OBS and Projector can use **Fade**, **Fade + rise**, or **None**, with a shared 0.1–3.0 second duration for each exit and entrance phase. The previous card exits before its content is replaced, and announcement audio starts as the new card enters. **Clear display** also animates the active card out before the Projector standby background or empty OBS canvas appears.
 
-## Tech Stack
+Before rehearsal, select **Enable audio** once on every browser output that will play announcements. For an OBS Browser Source, open **Interact** for the source and select the button there. The display reports blocked playback, missing recordings, and decoding failures instead of failing silently.
 
-- Vanilla HTML / CSS / JavaScript — no frameworks, no build tools
-- [`BroadcastChannel` API](https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel) for cross-window sync
-- [`localStorage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage) for photo/audio/settings persistence across windows
-- [JsBarcode](https://github.com/lindell/JsBarcode) (CDN) for barcode generation
-- [Lucide Icons](https://lucide.dev) (CDN) for UI icons
-- [Inter](https://fonts.google.com/specimen/Inter) via Google Fonts
+To monitor announcements through the Controller computer, enable **Also play on Controller** in Output settings and select **Enable Controller audio** once after each application start. Controller playback uses the operating system's default sound device and the same fade timings as remote outputs. It is optional monitoring and never blocks a scan or counts as a required output.
+
+Scanner, Projector, and OBS browser-window titles include the configured event name, for example `Awards Night - Scanner` and `Awards Night - OBS`.
+
+Connected devices can be renamed from the controller. The remote title updates to `Event Name - Device Name`, and the name survives reconnection.
+
+Projector and OBS cards show a green speaker when that device's audio is enabled and a red muted-speaker when it is muted.
+
+Audio readiness is reported by each remote browser. The read-only controller indicator remains red until the operator selects **Enable audio before going live** on that device, then turns green. Browser security prevents the controller from supplying that remote user gesture itself.
+
+The controller groups connected-device cards by role—Controller, Scanners, Projectors, and OBS—with a count for each active group.
+
+Required-output selections are scoped to the active ceremony. Newly discovered stations are optional by default and must be explicitly checked as **Required**. Choices survive an application restart for that ceremony, but starting a new ceremony or restoring a backup begins with a clean station list. Portable backups intentionally exclude station IDs because those identify venue hardware. Use **Clear remembered outputs** to remove obsolete stations without changing ceremony data; any currently connected Projector or OBS station is rediscovered immediately.
+
+If a photo is missing or corrupt, the previous photo is cleared immediately. Student text, animation, scan delivery, and any valid audio continue normally.
+
+## Backups and recovery
+
+**Export backup** creates a portable `.graduation-backup` archive containing the active library and unpublished recording drafts, with a SHA-256 inventory. A restore validates the archive before replacing data and creates a safety snapshot of the current state first.
+
+Automatic snapshots are also created before high-risk publication operations. The five newest successful snapshots are retained. Restore operations are journaled so an interrupted restore can be rolled back on the next launch.
+
+Recurring safety snapshots can be enabled from the collapsed **Backup & Restore** panel at 5, 10, or 30-minute intervals. They run silently when the controller is idle. Pre-operation safety snapshots remain enabled independently to preserve rollback protection.
+
+The panel's **Danger zone** provides **Reset everything** for returning the application to a first-run state. It requires typing `RESET EVERYTHING` and permanently removes ceremonies, media, drafts, settings, remembered outputs, event history, and safety snapshots without creating a recovery copy. Connected displays clear their ceremony cache while retaining their station identity and name; devices that were offline are cleared when they next connect to the blank controller.
+
+Restoring replaces the active library and drafts; it does not merge them.
+
+## Barcode labels
+
+The controller can generate Code 128 labels for selected students, with presets or custom millimetre dimensions, optional student fields, multiple copies, cutting guides, printing, and PDF export. Labels encode the exact CSV student ID. Print at 100% scale for reliable scanning.
+
+## Data storage
+
+The installed application normally resides under:
+
+```text
+%LOCALAPPDATA%\Programs\Anugerah Pengarah Display\
+```
+
+Managed data is stored beneath Electron's per-user application-data directory, normally:
+
+```text
+%APPDATA%\Anugerah Pengarah Display\
+|-- ceremony-library\
+|-- ceremony-library.previous\
+|-- library-working\
+|-- recording-drafts\
+|-- backups\
+|-- controller-settings.json
+|-- output-registry.json
+`-- event-ledger.json
+```
+
+Temporary restore and reset journals may also appear while those operations are active and are cleaned during successful completion or startup recovery. The exact application-data folder name can vary with application identity/version. Remote client caches live in the browser's IndexedDB database named `graduation-display`.
+
+## Security model
+
+This application intentionally uses open access on the local network. Anyone who can reach the controller's address can open a scanner or output route. Run it only on a dedicated or otherwise trusted ceremony LAN; it is not designed to be exposed to the public internet.
+
+## Legacy prototype
+
+`scanner.html` is the original serverless prototype and remains only as a reference. The Electron application does not load it.

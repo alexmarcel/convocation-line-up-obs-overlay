@@ -1,0 +1,44 @@
+{
+  "name": "graduation-line-up-display",
+  "version": "2.0.0",
+  "description": "Controller-hosted graduation scanner, projector and OBS display",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "pack": "electron-builder --win portable",
+    "dist": "electron-builder --win nsis portable"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "bwip-js": "^4.7.0",
+    "lucide": "^0.468.0",
+    "sharp": "^0.35.3",
+    "ws": "^8.18.3",
+    "yauzl": "^3.2.0"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "my.edu.graduation.display",
+    "productName": "Anugerah Pengarah Display",
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

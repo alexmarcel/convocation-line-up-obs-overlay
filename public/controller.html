@@ -1,0 +1,184 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Anugerah Pengarah Display Controller</title><link rel="stylesheet" href="/styles.css"></head>
+<body><main class="shell">
+  <header class="topbar"><div class="brand"><h1>Anugerah Pengarah Display Controller</h1><p>Local-network ceremony control desk</p></div><div class="status"><span class="dot" id="serverDot"></span><span id="serverState">Starting…</span></div></header>
+  <div class="warning">Open LAN mode: anyone who can reach these addresses can connect to this ceremony session.</div>
+  <section id="liveHero" class="live-hero waiting" aria-live="polite">
+    <div class="live-hero-media"><img id="liveHeroPhoto" alt="" hidden><div id="liveHeroPlaceholder" class="live-hero-placeholder" aria-hidden="true">Ready</div></div>
+    <div class="live-hero-content"><div class="live-hero-heading"><span id="liveHeroBadge" class="live-hero-badge">Starting</span><span id="liveHeroOutputs" class="live-hero-outputs">Checking outputs...</span></div><p id="liveHeroEyebrow" class="live-hero-eyebrow">Current ceremony status</p><h2 id="liveHeroName">Starting controller...</h2><div id="liveHeroDetails" class="live-hero-details">Preparing the local ceremony server.</div><div id="heroAudioTimeline" class="audio-timeline hero-audio-timeline" hidden><div class="audio-timeline-track"><span data-audio-timeline-fill></span></div><div data-audio-timeline-label>0:00 / 0:00</div></div></div>
+  </section>
+  <div class="toolbar ceremony-primary-actions"><button id="updateLibraryBtn" data-icon="↻" disabled>Update current ceremony</button><button id="importBtn" class="secondary" data-icon="＋">Start new ceremony</button></div>
+  <section class="grid" style="margin-top:18px">
+    <div class="panel"><h2 class="card-title" data-icon="▤">Ceremony library</h2><div class="stats library-stats"><div class="stat"><b id="studentCount">0</b>Students</div><button id="photoStat" class="stat stat-button" type="button" disabled><b id="photoCount">0</b>Photos</button><div class="stat"><b id="missingPhotoCount">0</b>Missing photos</div><button id="audioStat" class="stat stat-button" type="button" disabled><b id="audioCount">0</b>Audio</button></div>
+      <p class="muted library-name" id="version">No library imported</p><div class="library-action-groups"><div class="library-action-group" role="group" aria-label="Library tools"><button id="manageLibraryBtn" class="secondary" data-icon="⚙" disabled>Manage library</button><button id="recordNamesBtn" class="secondary" data-icon="●" disabled>Record student names</button><button id="printBarcodesBtn" class="secondary" data-icon="▥" disabled>Print barcodes</button></div><div class="library-action-group" role="group" aria-label="Library exports"><button id="exportLibraryCsvBtn" class="secondary" data-icon="▧" disabled>Export CSV</button><button id="exportPhotosBtn" class="secondary" data-icon="▣" disabled>Export Photos</button><button id="exportAudioBtn" class="secondary" data-icon="♪" disabled>Export Audio</button></div><button class="secondary library-clear-action" id="clearBtn" data-icon="×">Clear display</button></div><p id="importStatus"></p>
+      <div id="missingPhotoWarning"></div><div id="unmatched"></div>
+    </div>
+    <div class="panel"><h2 class="card-title" data-icon="⌁">Device URLs</h2><div id="urls" class="empty">Loading network addresses…</div></div>
+    <div class="panel"><h2 class="card-title" data-icon="▦">Connected devices</h2><div id="devices" class="devices connected-device-grid empty">No remote devices</div></div>
+    <section class="panel output-settings-panel" style="grid-column:1/-1" aria-labelledby="outputSettingsTitle">
+      <div class="output-settings-heading"><div><h2 id="outputSettingsTitle">Output settings</h2><p class="muted">Configure naming, sound, transitions, and the appearance of Projector and OBS outputs.</p></div></div>
+      <div class="output-settings-grid">
+        <section class="output-setting-card" data-output-section="event"><h3>Event &amp; branding</h3><p class="output-section-help">Set the event identity shown in remote window titles and the Projector header.</p><div class="output-field-grid">
+          <label class="output-field"><span>Event name</span><input id="eventName" type="text" maxlength="120" placeholder="Awards Night"></label>
+          <label class="output-field output-color-field"><span>Accent color</span><input id="accent" type="color" value="#00d2ff" title="Highlight color used across output graphics"></label>
+        </div></section>
+        <section class="output-setting-card" data-output-section="audio"><h3>Audio</h3><p class="output-section-help">Choose where announcements play. Avoid multiple nearby speakers to prevent echo.</p><div class="output-field-grid">
+          <label class="output-field"><span>Remote audio output <button type="button" class="help-tip" aria-describedby="tipAudioTarget" title="Choose which remote display roles play announcement audio">i<span id="tipAudioTarget" role="tooltip">Routes announcement audio to Projector, OBS, both, or neither. Each remote output must be enabled once before going live.</span></button></span><select id="audioTarget"><option value="projector">Projector</option><option value="obs">OBS</option><option value="both">Both</option><option value="none">None</option></select></label>
+          <div class="controller-audio-setting"><label class="checkbox-setting"><input id="playAudioOnController" type="checkbox"> Also play on Controller</label><button type="button" class="help-tip" aria-describedby="tipControllerAudio" title="Optional monitoring through the Controller computer">i<span id="tipControllerAudio" role="tooltip">Uses the Controller computer's default sound device. It never counts as a required output and needs enabling after each app start.</span></button><span id="controllerAudioStatus" class="controller-audio-status" aria-live="polite">Controller audio disabled</span><button id="enableControllerAudio" class="secondary" type="button" hidden>Enable Controller audio</button></div>
+          <label class="output-field"><span>Fade in <button type="button" class="help-tip" aria-describedby="tipAudioFade" title="Audio fade timing in seconds">i<span id="tipAudioFade" role="tooltip">Fade in starts at the beginning. Fade out reaches silence at the recording's natural end. Enter 0 to disable either fade.</span></button></span><span class="input-with-unit"><input id="audioFadeInSeconds" type="number" min="0" max="10" step="0.1" value="0"><span>seconds</span></span></label>
+          <label class="output-field"><span>Fade out</span><span class="input-with-unit"><input id="audioFadeOutSeconds" type="number" min="0" max="10" step="0.1" value="0"><span>seconds</span></span></label>
+        </div></section>
+        <section class="output-setting-card" data-output-section="transitions"><h3>Student transitions</h3><p class="output-section-help">Control how one student leaves and the next appears on OBS and Projector.</p><div class="output-field-grid">
+          <label class="output-field"><span>Student animation</span><select id="studentTransitionStyle"><option value="fade">Fade</option><option value="fade-rise">Fade + rise</option><option value="none">None</option></select></label>
+          <label class="output-field"><span>Phase duration <button type="button" class="help-tip" aria-describedby="tipTransitionDuration" title="Duration for each transition phase">i<span id="tipTransitionDuration" role="tooltip">Applies separately to the exit and entrance. Announcement audio begins when the new student starts entering.</span></button></span><span class="input-with-unit"><input id="studentTransitionSeconds" type="number" min="0.1" max="3" step="0.1" value="0.5"><span>seconds</span></span></label>
+        </div></section>
+        <section class="output-setting-card output-projector-card" data-output-section="projector"><h3>Projector</h3><p class="output-section-help">Configure the full-screen student view and the image shown after Clear display.</p><label class="checkbox-setting output-header-toggle"><input id="hideProjectorHeader" type="checkbox"> Hide Projector top header</label><div class="output-media-grid">
+          <div class="output-media-setting"><div class="output-media-content"><h4>Student display background <button type="button" class="help-tip" aria-describedby="tipStudentBackground" title="Background behind student cards">i<span id="tipStudentBackground" role="tooltip">Shown behind student information throughout the ceremony. Darkness improves text and photo contrast.</span></button></h4><p id="projectorBackgroundStatus" class="muted">No background image uploaded</p><p id="projectorBackgroundMessage" class="recording-message" aria-live="polite"></p><div class="toolbar"><button id="uploadProjectorBackground" class="secondary" title="Upload a JPG, PNG, or WebP student display background" disabled>Upload student background</button><button id="removeProjectorBackground" class="danger" title="Remove the student display background" disabled>Remove</button></div><label class="checkbox-setting"><input id="useProjectorBackground" type="checkbox" disabled> Use student background</label><label class="background-overlay-setting"><span>Background darkness <button type="button" class="help-tip" aria-describedby="tipBackgroundDarkness" title="Dark overlay strength">i<span id="tipBackgroundDarkness" role="tooltip">Adds a dark overlay so student information remains readable. This does not alter the uploaded image.</span></button></span><input id="projectorBackgroundOverlay" type="range" min="0" max="80" value="35"><output id="projectorBackgroundOverlayValue">35%</output></label></div><img id="projectorBackgroundPreview" alt="Student display background preview" hidden></div>
+          <div class="output-media-setting"><div class="output-media-content"><h4>Cleared-display standby background <button type="button" class="help-tip" aria-describedby="tipStandbyBackground" title="Background shown after Clear display">i<span id="tipStandbyBackground" role="tooltip">Shown only on Projector after Clear display, with a slow entrance. It disappears when the next student is shown.</span></button></h4><p id="mainBackgroundStatus" class="muted">No standby background uploaded</p><p id="mainBackgroundMessage" class="recording-message" aria-live="polite"></p><div class="toolbar"><button id="uploadMainBackground" class="secondary" title="Upload a JPG, PNG, or WebP standby background" disabled>Upload standby background</button><button id="removeMainBackground" class="danger" title="Remove the cleared-display standby background" disabled>Remove</button></div></div><img id="mainBackgroundPreview" alt="Cleared-display standby background preview" hidden></div>
+        </div></section>
+        <section class="output-setting-card" data-output-section="obs"><h3>OBS</h3><p class="output-section-help">Use transparency for compositing or a solid color for chroma key workflows.</p><div class="output-field-grid">
+          <label class="output-field"><span>Background mode <button type="button" class="help-tip" aria-describedby="tipObsBackground" title="OBS canvas background mode">i<span id="tipObsBackground" role="tooltip">Transparent is designed for direct overlay compositing. Chroma key fills the canvas with the selected removal color.</span></button></span><select id="obsBackgroundMode"><option value="transparent">Transparent</option><option value="chroma">Chroma key</option></select></label>
+          <label id="obsChromaColorLabel" class="output-field output-color-field" hidden><span>Chroma color</span><input id="obsChromaColor" type="color" value="#00ff00"></label>
+        </div></section>
+      </div>
+    </section>
+    <div class="panel" style="grid-column:1/-1"><div class="row"><div><h2>Required outputs</h2><p class="muted">Only designated outputs must be online and Ready before scans can go live. Remembered stations apply only to this ceremony.</p></div><button id="clearRememberedOutputs" class="secondary" disabled>Clear remembered outputs</button></div><div id="outputList" class="devices empty">No Projector or OBS output has connected yet</div></div>
+    <details id="backupPanel" class="panel collapsible-panel" style="grid-column:1/-1">
+      <summary><span><b>Backup &amp; Restore</b><small>Export the active library and recording drafts, or recover a safety snapshot.</small></span></summary>
+      <div class="collapsible-panel-content"><div class="toolbar"><button id="exportBackup">Export backup</button><button id="restoreBackup" class="secondary">Restore from backup</button></div>
+      <div id="backupProgress" class="backup-progress" hidden><div class="syncbar"><span id="backupProgressBar"></span></div><div class="row"><span id="backupProgressText">Preparing...</span><button id="cancelBackup" class="danger">Cancel</button></div></div>
+      <p id="backupMessage" class="muted"></p>
+      <div class="snapshot-schedule"><label><input id="automaticSnapshotsEnabled" type="checkbox"> Enable scheduled safety snapshots</label><label>Every <select id="automaticSnapshotInterval"><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="30">30 minutes</option></select></label></div>
+      <h2>Automatic safety snapshots</h2>
+      <div id="snapshotList" class="snapshots empty">No safety snapshots</div>
+      <div class="reset-danger-zone"><div><b>Danger zone</b><p class="muted">Permanently erase every ceremony, setting, draft, remembered output, and safety snapshot.</p></div><button id="openResetEverything" class="danger">Reset everything</button></div>
+      </div>
+    </details>
+    <div class="panel" style="grid-column:1/-1"><div class="topbar"><div><h2>Offline scan approvals</h2><p class="muted">Queued scans never go on air without approval.</p></div><div class="toolbar"><button id="approveAll">Approve all</button><button class="danger" id="discardAll">Discard all</button></div></div><div id="pending" class="pending empty">No pending scans</div></div>
+  </section>
+</main>
+<div id="recordingStudio" class="modal-backdrop" hidden>
+  <section class="recording-studio" role="dialog" aria-modal="true" aria-labelledby="recordingTitle">
+    <header class="studio-header"><div><h2 id="recordingTitle">Student Name Recording Studio</h2><p class="muted">Drafts stay local until you publish them.</p></div><button id="closeStudio" class="secondary">Close</button></header>
+    <div class="studio-toolbar">
+      <input id="recordingSearch" type="search" placeholder="Search name or ID">
+      <select id="recordingFilter"><option value="all">All students</option><option value="missing">Missing recordings</option><option value="recorded">Recorded drafts</option></select>
+      <select id="microphoneSelect"><option value="">Choose microphone</option></select>
+    </div>
+    <div class="recording-progress"><div><b id="draftCount">0</b> recorded</div><div><b id="missingCount">0</b> missing</div><div><b id="recordingTotal">0</b> total</div><div class="recording-position" id="recordingPosition">0 / 0</div></div>
+    <div class="meter" aria-label="Microphone level"><span id="microphoneLevel"></span></div>
+    <div class="recording-card">
+      <div class="recording-badge" id="recordingBadge">Missing</div>
+      <h3 id="recordingStudentName">No student selected</h3>
+      <p id="recordingStudentMarks" class="recording-student-marks"></p>
+      <p id="recordingStudentDetails" class="muted"></p>
+      <div id="recordingTimer" class="recording-timer">00:00.0</div>
+      <p id="recordingMessage" class="recording-message">Select a microphone to begin.</p>
+      <div class="studio-controls">
+        <button id="previousStudent" class="secondary">Previous</button><button id="recordButton" disabled>Record</button><button id="stopButton" class="danger" disabled>Stop</button><button id="playRecording" class="secondary" disabled>Play</button><button id="redoRecording" class="danger" disabled>Redo</button><button id="skipStudent" class="secondary">Skip</button><button id="saveNext" disabled>Save &amp; Next</button>
+      </div>
+    </div>
+    <footer class="studio-footer"><span class="muted">Space: record/stop · Enter: save &amp; next · Arrows: navigate · Delete: redo</span><button id="publishRecordings">Publish recordings</button></footer>
+  </section>
+</div>
+<div id="restorePreview" class="modal-backdrop" hidden>
+  <section class="restore-dialog panel" role="dialog" aria-modal="true">
+    <h2>Confirm restore</h2>
+    <p class="warning">The current library and drafts will be replaced after a safety snapshot is created.</p>
+    <div id="restoreDetails" class="restore-details"></div>
+    <p id="restoreError" class="recording-message"></p>
+    <div class="toolbar"><button id="confirmRestore" class="danger">Restore backup</button><button id="cancelRestore" class="secondary">Cancel</button></div>
+  </section>
+</div>
+<div id="barcodeStudio" class="modal-backdrop" hidden>
+  <section class="barcode-studio" role="dialog" aria-modal="true" aria-labelledby="barcodeStudioTitle">
+    <header class="studio-header"><div><h2 id="barcodeStudioTitle">Barcode Label Printing</h2><p class="muted">Code 128 labels for A4 printing and cutting.</p></div><button id="closeBarcodeStudio" class="secondary">Close</button></header>
+    <div class="barcode-workspace">
+      <section>
+        <div class="studio-toolbar"><input id="barcodeSearch" type="search" placeholder="Search name or ID"><select id="barcodeGroup"><option value="">All groups</option></select></div>
+        <div class="toolbar"><button id="selectAllBarcodes" class="secondary">Select all</button><button id="selectFilteredBarcodes" class="secondary">Select filtered</button><button id="clearBarcodeSelection" class="secondary">Select none</button></div>
+        <div id="barcodeStudentList" class="barcode-students"></div>
+      </section>
+      <section class="barcode-settings">
+        <h3>Layout</h3>
+        <div class="settings-grid">
+          <label>Preset<select id="labelPreset"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="custom">Custom</option></select></label>
+          <label>Copies<input id="labelCopies" type="number" min="1" max="10" value="1"></label>
+          <label>Width (mm)<input id="labelWidth" type="number" min="20" max="190" step="0.5"></label>
+          <label>Height (mm)<input id="labelHeight" type="number" min="20" max="277" step="0.5"></label>
+          <label>Page margin (mm)<input id="pageMargin" type="number" min="0" max="30" step="0.5"></label>
+          <label>Columns<input id="labelColumns" type="number" min="1" max="8"></label>
+          <label>Horizontal gap (mm)<input id="labelGapX" type="number" min="0" max="30" step="0.5"></label>
+          <label>Vertical gap (mm)<input id="labelGapY" type="number" min="0" max="30" step="0.5"></label>
+          <label>Padding (mm)<input id="labelPadding" type="number" min="1" max="15" step="0.5"></label>
+          <label>Cutting guides<select id="cuttingGuide"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="crop">Crop marks</option><option value="none">None</option></select></label>
+        </div>
+        <div class="field-toggles"><label><input id="showLabelName" type="checkbox" checked> Name</label><label><input id="showLabelId" type="checkbox" checked> ID</label><label><input id="showLabelGroup" type="checkbox" checked> Program</label><label><input id="showLabelMarks" type="checkbox" checked> Marks</label></div>
+        <h3>Preview</h3><div id="barcodePreview" class="barcode-preview"></div>
+        <div id="barcodePreflight" class="barcode-preflight"></div>
+      </section>
+    </div>
+    <footer class="studio-footer"><span class="muted">Print at 100% scale for reliable dimensions.</span><div class="toolbar"><button id="printBarcodeLabels">Print</button><button id="saveBarcodePdf" class="secondary">Save PDF</button></div></footer>
+  </section>
+</div>
+<div id="missingPhotoModal" class="modal-backdrop" hidden>
+  <section class="missing-photo-dialog panel" role="dialog" aria-modal="true" aria-labelledby="missingPhotoTitle">
+    <header class="studio-header"><div><h2 id="missingPhotoTitle">Students with missing photos</h2><p class="muted" id="missingPhotoSummary"></p></div><button id="closeMissingPhotos" class="secondary">Close</button></header>
+    <input id="missingPhotoSearch" class="modal-search" type="search" placeholder="Search name, ID, or group">
+    <div id="missingPhotoList" class="missing-photo-list"></div>
+  </section>
+</div>
+<div id="audioRecordsModal" class="modal-backdrop" hidden>
+  <section class="audio-records-dialog panel" role="dialog" aria-modal="true" aria-labelledby="audioRecordsTitle">
+    <div class="studio-header"><div><h2 id="audioRecordsTitle">Published audio records</h2><p id="audioRecordsSummary" class="muted"></p></div><button id="closeAudioRecords" class="secondary">Close</button></div>
+    <input id="audioRecordsSearch" class="modal-search" type="search" placeholder="Search student ID, name, or audio filename">
+    <div class="audio-records-header"><b>ID</b><b>Student name</b><b>Audio file</b><span></span></div>
+    <div id="audioRecordsList" class="audio-records-list"></div>
+  </section>
+</div>
+<div id="photoRecordsModal" class="modal-backdrop" hidden>
+  <section class="photo-records-dialog panel" role="dialog" aria-modal="true" aria-labelledby="photoRecordsTitle">
+    <div class="studio-header"><div><h2 id="photoRecordsTitle">Published photo records</h2><p id="photoRecordsSummary" class="muted"></p></div><button id="closePhotoRecords" class="secondary">Close</button></div>
+    <input id="photoRecordsSearch" class="modal-search" type="search" placeholder="Search student ID, name, or photo filename">
+    <div class="photo-records-header"><b>Photo</b><b>ID</b><b>Student name</b><b>Photo file</b></div>
+    <div id="photoRecordsList" class="photo-records-list"></div>
+  </section>
+</div>
+<div id="maintenanceStudio" class="modal-backdrop" hidden>
+  <section class="maintenance-studio panel" role="dialog" aria-modal="true" aria-labelledby="maintenanceTitle">
+    <div class="studio-header"><div><h2 id="maintenanceTitle">Library Maintenance Studio</h2><p id="maintenanceSummary" class="muted">Changes are saved locally and remain off-air until published.</p></div><button id="closeMaintenance" class="secondary">Close</button></div>
+    <div class="studio-toolbar"><input id="maintenanceSearch" type="search" placeholder="Search ID, name, program, or marks"><button id="addMaintenanceStudent">Add student</button><button id="reconcileMaintenance" class="secondary">Import updated CSV</button></div>
+    <div id="maintenanceDiff" class="maintenance-diff"></div>
+    <div class="maintenance-header"><b>Order / student</b><b>Program and marks</b><b>Media</b><b>Actions</b></div>
+    <div id="maintenanceList" class="maintenance-list"></div>
+    <p id="maintenanceMessage" class="recording-message"></p>
+    <footer class="studio-footer"><span class="muted">Working-copy changes survive controller restarts.</span><div class="toolbar"><button id="saveMaintenanceDraft" class="secondary">Save draft</button><button id="discardMaintenance" class="danger">Discard changes</button><button id="publishMaintenance">Publish changes</button></div></footer>
+  </section>
+</div>
+<div id="studentEditorModal" class="modal-backdrop" hidden>
+  <section class="student-editor panel" role="dialog" aria-modal="true" aria-labelledby="studentEditorTitle">
+    <h2 id="studentEditorTitle">Add student</h2>
+    <div class="student-editor-grid"><label>ID<input id="editorStudentId" maxlength="128"></label><label>Name<input id="editorStudentName"></label><label>Program<input id="editorStudentGroup"></label><label>Marks<input id="editorStudentMarks"></label><label>Position<select id="editorPosition"><option value="end">At end</option><option value="before">Before student</option><option value="after">After student</option></select></label><label id="editorTargetLabel" hidden>Student<select id="editorTarget"></select></label></div>
+    <p id="studentEditorMessage" class="recording-message"></p>
+    <div class="toolbar"><button id="saveStudent">Save draft</button><button id="savePublishStudent">Save &amp; publish</button><button id="cancelStudentEditor" class="secondary">Cancel</button></div>
+  </section>
+</div>
+<div id="deviceNameModal" class="modal-backdrop" hidden>
+  <section class="device-name-dialog panel" role="dialog" aria-modal="true" aria-labelledby="deviceNameTitle">
+    <h2 id="deviceNameTitle">Edit device name</h2><p class="muted">This name is shown in the controller and remote window title.</p>
+    <label class="device-name-field">Device name<input id="deviceNameInput" maxlength="80" autocomplete="off"></label><p id="deviceNameError" class="recording-message"></p>
+    <div class="toolbar"><button id="saveDeviceName">Save name</button><button id="cancelDeviceName" class="secondary">Cancel</button></div>
+  </section>
+</div>
+<div id="barcodePrintArea" aria-hidden="true"></div>
+<div id="resetEverythingModal" class="modal-backdrop" hidden>
+  <section class="reset-everything-dialog panel" role="dialog" aria-modal="true" aria-labelledby="resetEverythingTitle">
+    <h2 id="resetEverythingTitle">Reset everything?</h2>
+    <p class="warning">This permanently removes all ceremonies, media, drafts, staged edits, controller settings, remembered outputs, event history, and safety snapshots. No recovery snapshot will be created.</p>
+    <p>Connected Scanner, OBS, and Projector devices will discard their cached ceremony while retaining their device identity and name.</p>
+    <label class="device-name-field">Type <b>RESET EVERYTHING</b> to continue<input id="resetEverythingConfirmation" autocomplete="off" spellcheck="false"></label>
+    <p id="resetEverythingMessage" class="recording-message" aria-live="polite"></p>
+    <div class="toolbar"><button id="confirmResetEverything" class="danger" disabled>Reset everything permanently</button><button id="cancelResetEverything" class="secondary">Cancel</button></div>
+  </section>
+</div>
+<style id="barcodePrintStyle"></style>
+<script src="/client-crypto.js"></script><script src="/output-settings.js"></script><script src="/audio-fade.js"></script><script src="/audio-timeline.js"></script><script src="/socket.js"></script><script src="/photo-status.js"></script><script src="/controller.js"></script><script src="/recording.js"></script><script src="/backup.js"></script><script src="/barcode-layout.js"></script><script src="/barcodes.js"></script><script src="/maintenance.js"></script><script type="module" src="/controller-icons.js"></script></body></html>
